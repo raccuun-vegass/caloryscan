@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>КалориСкан — подсчёт калорий по фото</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="logo">
+        <span class="logo-icon">🍽️</span>
+        <div>
+          <h1>КалориСкан</h1>
+          <p>Анализ еды по фотографии с помощью ИИ</p>
+        </div>
+      </div>
+    </header>
+    <main class="main">
+      <div class="upload-section" id="upload-section">
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept="image/*" hidden />
+          <div class="drop-zone-content" id="drop-idle">
+            <div class="drop-icon">📷</div>
+            <h2>Загрузите фото еды</h2>
+            <p>Перетащите изображение сюда или нажмите для выбора</p>
+            <button class="btn-upload" onclick="document.getElementById('file-input').click()">Выбрать фото</button>
+          </div>
+        </div>
+        <div class="preview-area hidden" id="preview-area">
+          <div class="preview-wrapper">
+            <img id="preview-img" src="" alt="Фото еды" />
+            <button class="btn-remove" id="btn-remove" title="Удалить фото">✕</button>
+          </div>
+          <button class="btn-analyze" id="btn-analyze">
+            <span class="btn-icon">🔍</span>
+            Анализировать калории
+          </button>
+        </div>
+      </div>
+      <div class="results-section hidden" id="results-section">
+        <div class="loading-card hidden" id="loading-card">
+          <div class="spinner"></div>
+          <p>ИИ анализирует вашу еду...</p>
+          <small>Обычно занимает 5–15 секунд</small>
+        </div>
+        <div class="result-card hidden" id="result-card">
+          <div class="result-header">
+            <h2>Результаты анализа</h2>
+          </div>
+          <div class="total-calories">
+            <div class="calories-number" id="calories-number">—</div>
+            <div class="calories-label">ккал</div>
+          </div>
+          <div class="macros-grid">
+            <div class="macro-card">
+              <div class="macro-icon">💪</div>
+              <div class="macro-value" id="val-protein">—</div>
+              <div class="macro-label">Белки, г</div>
+            </div>
+            <div class="macro-card">
+              <div class="macro-icon">🥑</div>
+              <div class="macro-value" id="val-fat">—</div>
+              <div class="macro-label">Жиры, г</div>
+            </div>
+            <div class="macro-card">
+              <div class="macro-icon">🌾</div>
+              <div class="macro-value" id="val-carbs">—</div>
+              <div class="macro-label">Углеводы, г</div>
+            </div>
+          </div>
+          <div class="dishes-section">
+            <h3>Обнаруженные продукты</h3>
+            <ul class="dishes-list" id="dishes-list"></ul>
+          </div>
+          <div class="description-section">
+            <h3>Описание</h3>
+            <p id="result-description"></p>
+          </div>
+          <button class="btn-new" id="btn-new">📷 Анализировать другое фото</button>
+        </div>
+        <div class="error-card hidden" id="error-card">
+          <div class="error-icon">⚠️</div>
+          <h3 id="error-title">Произошла ошибка</h3>
+          <p id="error-message"></p>
+          <button class="btn-new" id="btn-retry">Попробовать снова</button>
+        </div>
+      </div>
+
+      <section class="history-section" id="history-section">
+        <div class="history-header">
+          <h2>Дневник питания — сегодня</h2>
+          <button class="btn-clear-history" id="btn-clear-history">Очистить</button>
+        </div>
+        <div class="history-daily-total hidden" id="history-daily-total"></div>
+        <p class="history-empty" id="history-empty">Добавьте первый приём пищи</p>
+        <ul class="history-list hidden" id="history-list"></ul>
+      </section>
+    </main>
+    <footer class="footer">
+      <p>Данные носят приблизительный характер. Для точного подсчёта рекомендуется взвешивать продукты.</p>
+    </footer>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
