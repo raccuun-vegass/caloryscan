@@ -239,3 +239,7 @@ function renderHistory() {
 document.getElementById('btn-clear-history').addEventListener('click', clearTodayHistory);
 
 renderHistory();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js');
+}
