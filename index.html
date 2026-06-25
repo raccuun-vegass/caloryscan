@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>КалориСкан — подсчёт калорий по фото</title>
+  <title>КалориСкан</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
-  <meta name="theme-color" content="#22c55e" />
+  <meta name="theme-color" content="#ffffff" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="КалориСкан" />
@@ -15,44 +15,38 @@
 <body>
   <div class="app">
     <header class="header">
-      <div class="logo">
-        <span class="logo-icon">🍽️</span>
-        <div>
-          <h1>КалориСкан</h1>
-          <p>Анализ еды по фотографии с помощью ИИ</p>
-        </div>
-      </div>
+      <h1>КалориСкан</h1>
+      <p>Анализ еды по фотографии</p>
     </header>
 
     <main class="main">
 
       <!-- ── TAB: Анализ ── -->
       <div class="tab-content active" id="tab-analyze">
-        <div class="upload-section" id="upload-section">
-          <div class="drop-zone" id="drop-zone">
+        <div id="upload-section">
+          <label class="drop-zone" id="drop-zone" for="file-input">
             <input type="file" id="file-input" accept="image/*" hidden />
             <div class="drop-zone-content">
-              <div class="drop-icon">📷</div>
-              <h2>Загрузите фото еды</h2>
-              <p>Перетащите изображение сюда или нажмите для выбора</p>
-              <button class="btn-upload" onclick="document.getElementById('file-input').click()">Выбрать фото</button>
+              <div class="drop-icon">
+                <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              </div>
+              <h2>Сфотографируйте еду</h2>
+              <p>Нажмите, чтобы выбрать фото</p>
+              <div class="drop-zone-cta">Выбрать фото</div>
             </div>
-          </div>
+          </label>
           <div class="preview-area hidden" id="preview-area">
             <div class="preview-wrapper">
               <img id="preview-img" src="" alt="Фото еды" />
-              <button class="btn-remove" id="btn-remove" title="Удалить фото">✕</button>
+              <button class="btn-remove" id="btn-remove">✕</button>
             </div>
-            <button class="btn-analyze" id="btn-analyze">
-              <span class="btn-icon">🔍</span>
-              Анализировать калории
-            </button>
+            <button class="btn-analyze" id="btn-analyze">Анализировать калории</button>
           </div>
         </div>
 
         <div class="quick-actions">
-          <button class="btn-quick" id="btn-open-manual">✏️ Добавить вручную</button>
-          <button class="btn-quick" id="btn-open-barcode">📲 Сканер</button>
+          <button class="btn-quick" id="btn-open-manual">Добавить вручную</button>
+          <button class="btn-quick" id="btn-open-barcode">Сканер</button>
         </div>
 
         <div class="results-section hidden" id="results-section">
@@ -62,39 +56,33 @@
             <small>Обычно занимает 5–15 секунд</small>
           </div>
           <div class="result-card hidden" id="result-card">
-            <div class="result-header">
-              <h2>Результаты анализа</h2>
-            </div>
             <div class="total-calories">
               <div class="calories-number" id="calories-number">—</div>
               <div class="calories-label">ккал</div>
             </div>
             <div class="macros-grid">
               <div class="macro-card">
-                <div class="macro-icon">💪</div>
-                <div class="macro-value" id="val-protein">—</div>
-                <div class="macro-label">Белки, г</div>
+                <div class="macro-value"><span id="val-protein">—</span><span class="macro-unit">г</span></div>
+                <div class="macro-label">Белки</div>
               </div>
               <div class="macro-card">
-                <div class="macro-icon">🥑</div>
-                <div class="macro-value" id="val-fat">—</div>
-                <div class="macro-label">Жиры, г</div>
+                <div class="macro-value"><span id="val-fat">—</span><span class="macro-unit">г</span></div>
+                <div class="macro-label">Жиры</div>
               </div>
               <div class="macro-card">
-                <div class="macro-icon">🌾</div>
-                <div class="macro-value" id="val-carbs">—</div>
-                <div class="macro-label">Углеводы, г</div>
+                <div class="macro-value"><span id="val-carbs">—</span><span class="macro-unit">г</span></div>
+                <div class="macro-label">Углеводы</div>
               </div>
             </div>
             <div class="dishes-section">
-              <h3>Обнаруженные продукты</h3>
+              <h3>Состав</h3>
               <ul class="dishes-list" id="dishes-list"></ul>
             </div>
             <div class="description-section">
               <h3>Описание</h3>
               <p id="result-description"></p>
             </div>
-            <button class="btn-new" id="btn-new">📷 Анализировать другое фото</button>
+            <button class="btn-new" id="btn-new">Анализировать другое фото</button>
           </div>
           <div class="error-card hidden" id="error-card">
             <div class="error-icon">⚠️</div>
@@ -110,46 +98,26 @@
         <div class="card">
           <h2>Прогресс на сегодня</h2>
           <div class="progress-item">
-            <div class="progress-label">
-              <span>Калории</span>
-              <span id="prog-cal-text">0 / 2000 ккал</span>
-            </div>
-            <div class="progress-bar-track">
-              <div class="progress-bar-fill" id="prog-cal-fill" style="width:0%"></div>
-            </div>
+            <div class="progress-label"><span>Калории</span><span id="prog-cal-text">0 / 2000 ккал</span></div>
+            <div class="progress-bar-track"><div class="progress-bar-fill" id="prog-cal-fill" style="width:0%"></div></div>
           </div>
           <div class="progress-item">
-            <div class="progress-label">
-              <span>Белки</span>
-              <span id="prog-protein-text">0 / 80 г</span>
-            </div>
-            <div class="progress-bar-track">
-              <div class="progress-bar-fill protein" id="prog-protein-fill" style="width:0%"></div>
-            </div>
+            <div class="progress-label"><span>Белки</span><span id="prog-protein-text">0 / 80 г</span></div>
+            <div class="progress-bar-track"><div class="progress-bar-fill protein" id="prog-protein-fill" style="width:0%"></div></div>
           </div>
           <div class="progress-item">
-            <div class="progress-label">
-              <span>Жиры</span>
-              <span id="prog-fat-text">0 / 65 г</span>
-            </div>
-            <div class="progress-bar-track">
-              <div class="progress-bar-fill fat" id="prog-fat-fill" style="width:0%"></div>
-            </div>
+            <div class="progress-label"><span>Жиры</span><span id="prog-fat-text">0 / 65 г</span></div>
+            <div class="progress-bar-track"><div class="progress-bar-fill fat" id="prog-fat-fill" style="width:0%"></div></div>
           </div>
-          <div class="progress-item" style="margin-bottom:0">
-            <div class="progress-label">
-              <span>Углеводы</span>
-              <span id="prog-carbs-text">0 / 250 г</span>
-            </div>
-            <div class="progress-bar-track">
-              <div class="progress-bar-fill carbs" id="prog-carbs-fill" style="width:0%"></div>
-            </div>
+          <div class="progress-item">
+            <div class="progress-label"><span>Углеводы</span><span id="prog-carbs-text">0 / 250 г</span></div>
+            <div class="progress-bar-track"><div class="progress-bar-fill carbs" id="prog-carbs-fill" style="width:0%"></div></div>
           </div>
         </div>
 
         <div class="card">
           <div class="water-header">
-            <h2>💧 Вода</h2>
+            <h2>Вода</h2>
             <span id="water-text">0 / 2000 мл</span>
           </div>
           <div class="water-progress-track">
@@ -186,7 +154,7 @@
         <div class="card">
           <h2>График</h2>
           <canvas id="weight-chart" height="200"></canvas>
-          <p class="weight-empty hidden" id="weight-empty">Нет данных. Начните записывать вес.</p>
+          <p class="weight-empty hidden" id="weight-empty">Начните записывать вес — здесь появится график</p>
         </div>
         <div class="card">
           <h2>История</h2>
@@ -199,58 +167,44 @@
       <div class="tab-content" id="tab-goals">
         <div class="card">
           <h2>Дневные цели</h2>
-          <div class="goal-row">
-            <label>Калории (ккал)</label>
-            <input type="number" id="goal-cal" min="500" max="10000" placeholder="2000" />
-          </div>
-          <div class="goal-row">
-            <label>Белки (г)</label>
-            <input type="number" id="goal-protein" min="0" max="500" placeholder="80" />
-          </div>
-          <div class="goal-row">
-            <label>Жиры (г)</label>
-            <input type="number" id="goal-fat" min="0" max="500" placeholder="65" />
-          </div>
-          <div class="goal-row">
-            <label>Углеводы (г)</label>
-            <input type="number" id="goal-carbs" min="0" max="1000" placeholder="250" />
-          </div>
-          <div class="goal-row">
-            <label>Вода (мл)</label>
-            <input type="number" id="goal-water" min="500" max="10000" placeholder="2000" />
-          </div>
-          <button class="btn-save-goals" id="btn-save-goals">Сохранить цели</button>
-          <p class="goals-saved hidden" id="goals-saved">✓ Сохранено</p>
+          <div class="goal-row"><label>Калории (ккал)</label><input type="number" id="goal-cal" min="500" max="10000" placeholder="2000" /></div>
+          <div class="goal-row"><label>Белки (г)</label><input type="number" id="goal-protein" min="0" max="500" placeholder="80" /></div>
+          <div class="goal-row"><label>Жиры (г)</label><input type="number" id="goal-fat" min="0" max="500" placeholder="65" /></div>
+          <div class="goal-row"><label>Углеводы (г)</label><input type="number" id="goal-carbs" min="0" max="1000" placeholder="250" /></div>
+          <div class="goal-row"><label>Вода (мл)</label><input type="number" id="goal-water" min="500" max="10000" placeholder="2000" /></div>
+          <button class="btn-save-goals" id="btn-save-goals">Сохранить</button>
+          <p class="goals-saved hidden" id="goals-saved">Сохранено</p>
         </div>
       </div>
 
     </main>
 
+    <!-- ── Bottom nav ── -->
     <nav class="bottom-nav">
       <button class="nav-btn active" data-tab="tab-analyze">
-        <span class="nav-icon">📷</span>
+        <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
         <span>Анализ</span>
       </button>
       <button class="nav-btn" data-tab="tab-diary">
-        <span class="nav-icon">📋</span>
+        <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
         <span>Дневник</span>
       </button>
       <button class="nav-btn" data-tab="tab-weight">
-        <span class="nav-icon">⚖️</span>
+        <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 015 5c0 2.76-2.24 5-5 5S7 9.76 7 7a5 5 0 015-5z"/><path d="M3 21v-1a9 9 0 0118 0v1"/></svg>
         <span>Вес</span>
       </button>
       <button class="nav-btn" data-tab="tab-goals">
-        <span class="nav-icon">🎯</span>
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
         <span>Цели</span>
       </button>
     </nav>
 
     <footer class="footer">
-      <p>Данные носят приблизительный характер. Для точного подсчёта рекомендуется взвешивать продукты.</p>
+      <p>Данные носят приблизительный характер. Для точного подсчёта взвешивайте продукты.</p>
     </footer>
   </div>
 
-  <!-- Modal: Ручной ввод -->
+  <!-- Modal: Добавить вручную -->
   <div class="modal-overlay hidden" id="modal-manual">
     <div class="modal">
       <div class="modal-header">
@@ -258,15 +212,17 @@
         <button class="modal-close" id="modal-manual-close">✕</button>
       </div>
       <div class="modal-body">
-        <div class="form-row">
-          <label>Название блюда</label>
-          <input type="text" id="manual-name" placeholder="Например: гречка с котлетой" autocomplete="off" />
+        <div class="form-section">
+          <div class="form-row">
+            <label>Название блюда</label>
+            <input type="text" id="manual-name" placeholder="Гречка с котлетой" autocomplete="off" />
+          </div>
+          <div class="form-row">
+            <label>Вес / порция (г)</label>
+            <input type="number" id="manual-weight" placeholder="350" min="1" />
+          </div>
         </div>
-        <div class="form-row">
-          <label>Вес / порция (г)</label>
-          <input type="number" id="manual-weight" placeholder="350" min="1" />
-        </div>
-        <button class="btn-modal-calc" id="btn-manual-calc">🤖 Рассчитать КБЖУ</button>
+        <button class="btn-modal-calc" id="btn-manual-calc">Рассчитать КБЖУ</button>
 
         <div class="manual-loading hidden" id="manual-loading">
           <div class="spinner-small"></div>
@@ -303,14 +259,16 @@
             <span id="barcode-fat"></span>
             <span id="barcode-carbs"></span>
           </div>
-          <div class="barcode-inputs">
-            <div class="form-row">
-              <label>Масса упаковки (г)</label>
-              <input type="number" id="barcode-package" placeholder="450" min="1" />
-            </div>
-            <div class="form-row">
-              <label>Съедено (г)</label>
-              <input type="number" id="barcode-portion" value="100" min="1" />
+          <div class="form-section" style="margin-top:0">
+            <div class="barcode-inputs">
+              <div class="form-row">
+                <label>Масса упаковки (г)</label>
+                <input type="number" id="barcode-package" placeholder="450" min="1" />
+              </div>
+              <div class="form-row">
+                <label>Съедено (г)</label>
+                <input type="number" id="barcode-portion" value="100" min="1" />
+              </div>
             </div>
           </div>
           <div class="barcode-total" id="barcode-total-preview">—</div>
