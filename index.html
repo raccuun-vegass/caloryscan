@@ -23,91 +23,305 @@
         </div>
       </div>
     </header>
+
     <main class="main">
-      <div class="upload-section" id="upload-section">
-        <div class="drop-zone" id="drop-zone">
-          <input type="file" id="file-input" accept="image/*" hidden />
-          <div class="drop-zone-content" id="drop-idle">
-            <div class="drop-icon">📷</div>
-            <h2>Загрузите фото еды</h2>
-            <p>Перетащите изображение сюда или нажмите для выбора</p>
-            <button class="btn-upload" onclick="document.getElementById('file-input').click()">Выбрать фото</button>
-          </div>
-        </div>
-        <div class="preview-area hidden" id="preview-area">
-          <div class="preview-wrapper">
-            <img id="preview-img" src="" alt="Фото еды" />
-            <button class="btn-remove" id="btn-remove" title="Удалить фото">✕</button>
-          </div>
-          <button class="btn-analyze" id="btn-analyze">
-            <span class="btn-icon">🔍</span>
-            Анализировать калории
-          </button>
-        </div>
-      </div>
-      <div class="results-section hidden" id="results-section">
-        <div class="loading-card hidden" id="loading-card">
-          <div class="spinner"></div>
-          <p>ИИ анализирует вашу еду...</p>
-          <small>Обычно занимает 5–15 секунд</small>
-        </div>
-        <div class="result-card hidden" id="result-card">
-          <div class="result-header">
-            <h2>Результаты анализа</h2>
-          </div>
-          <div class="total-calories">
-            <div class="calories-number" id="calories-number">—</div>
-            <div class="calories-label">ккал</div>
-          </div>
-          <div class="macros-grid">
-            <div class="macro-card">
-              <div class="macro-icon">💪</div>
-              <div class="macro-value" id="val-protein">—</div>
-              <div class="macro-label">Белки, г</div>
-            </div>
-            <div class="macro-card">
-              <div class="macro-icon">🥑</div>
-              <div class="macro-value" id="val-fat">—</div>
-              <div class="macro-label">Жиры, г</div>
-            </div>
-            <div class="macro-card">
-              <div class="macro-icon">🌾</div>
-              <div class="macro-value" id="val-carbs">—</div>
-              <div class="macro-label">Углеводы, г</div>
+
+      <!-- ── TAB: Анализ ── -->
+      <div class="tab-content active" id="tab-analyze">
+        <div class="upload-section" id="upload-section">
+          <div class="drop-zone" id="drop-zone">
+            <input type="file" id="file-input" accept="image/*" hidden />
+            <div class="drop-zone-content">
+              <div class="drop-icon">📷</div>
+              <h2>Загрузите фото еды</h2>
+              <p>Перетащите изображение сюда или нажмите для выбора</p>
+              <button class="btn-upload" onclick="document.getElementById('file-input').click()">Выбрать фото</button>
             </div>
           </div>
-          <div class="dishes-section">
-            <h3>Обнаруженные продукты</h3>
-            <ul class="dishes-list" id="dishes-list"></ul>
+          <div class="preview-area hidden" id="preview-area">
+            <div class="preview-wrapper">
+              <img id="preview-img" src="" alt="Фото еды" />
+              <button class="btn-remove" id="btn-remove" title="Удалить фото">✕</button>
+            </div>
+            <button class="btn-analyze" id="btn-analyze">
+              <span class="btn-icon">🔍</span>
+              Анализировать калории
+            </button>
           </div>
-          <div class="description-section">
-            <h3>Описание</h3>
-            <p id="result-description"></p>
-          </div>
-          <button class="btn-new" id="btn-new">📷 Анализировать другое фото</button>
         </div>
-        <div class="error-card hidden" id="error-card">
-          <div class="error-icon">⚠️</div>
-          <h3 id="error-title">Произошла ошибка</h3>
-          <p id="error-message"></p>
-          <button class="btn-new" id="btn-retry">Попробовать снова</button>
+
+        <div class="quick-actions">
+          <button class="btn-quick" id="btn-open-manual">✏️ Добавить вручную</button>
+          <button class="btn-quick" id="btn-open-barcode">📲 Сканер</button>
+        </div>
+
+        <div class="results-section hidden" id="results-section">
+          <div class="loading-card hidden" id="loading-card">
+            <div class="spinner"></div>
+            <p>ИИ анализирует вашу еду...</p>
+            <small>Обычно занимает 5–15 секунд</small>
+          </div>
+          <div class="result-card hidden" id="result-card">
+            <div class="result-header">
+              <h2>Результаты анализа</h2>
+            </div>
+            <div class="total-calories">
+              <div class="calories-number" id="calories-number">—</div>
+              <div class="calories-label">ккал</div>
+            </div>
+            <div class="macros-grid">
+              <div class="macro-card">
+                <div class="macro-icon">💪</div>
+                <div class="macro-value" id="val-protein">—</div>
+                <div class="macro-label">Белки, г</div>
+              </div>
+              <div class="macro-card">
+                <div class="macro-icon">🥑</div>
+                <div class="macro-value" id="val-fat">—</div>
+                <div class="macro-label">Жиры, г</div>
+              </div>
+              <div class="macro-card">
+                <div class="macro-icon">🌾</div>
+                <div class="macro-value" id="val-carbs">—</div>
+                <div class="macro-label">Углеводы, г</div>
+              </div>
+            </div>
+            <div class="dishes-section">
+              <h3>Обнаруженные продукты</h3>
+              <ul class="dishes-list" id="dishes-list"></ul>
+            </div>
+            <div class="description-section">
+              <h3>Описание</h3>
+              <p id="result-description"></p>
+            </div>
+            <button class="btn-new" id="btn-new">📷 Анализировать другое фото</button>
+          </div>
+          <div class="error-card hidden" id="error-card">
+            <div class="error-icon">⚠️</div>
+            <h3 id="error-title">Произошла ошибка</h3>
+            <p id="error-message"></p>
+            <button class="btn-new" id="btn-retry">Попробовать снова</button>
+          </div>
         </div>
       </div>
 
-      <section class="history-section" id="history-section">
-        <div class="history-header">
-          <h2>Дневник питания — сегодня</h2>
-          <button class="btn-clear-history" id="btn-clear-history">Очистить</button>
+      <!-- ── TAB: Дневник ── -->
+      <div class="tab-content" id="tab-diary">
+        <div class="card">
+          <h2>Прогресс на сегодня</h2>
+          <div class="progress-item">
+            <div class="progress-label">
+              <span>Калории</span>
+              <span id="prog-cal-text">0 / 2000 ккал</span>
+            </div>
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" id="prog-cal-fill" style="width:0%"></div>
+            </div>
+          </div>
+          <div class="progress-item">
+            <div class="progress-label">
+              <span>Белки</span>
+              <span id="prog-protein-text">0 / 80 г</span>
+            </div>
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill protein" id="prog-protein-fill" style="width:0%"></div>
+            </div>
+          </div>
+          <div class="progress-item">
+            <div class="progress-label">
+              <span>Жиры</span>
+              <span id="prog-fat-text">0 / 65 г</span>
+            </div>
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill fat" id="prog-fat-fill" style="width:0%"></div>
+            </div>
+          </div>
+          <div class="progress-item" style="margin-bottom:0">
+            <div class="progress-label">
+              <span>Углеводы</span>
+              <span id="prog-carbs-text">0 / 250 г</span>
+            </div>
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill carbs" id="prog-carbs-fill" style="width:0%"></div>
+            </div>
+          </div>
         </div>
-        <div class="history-daily-total hidden" id="history-daily-total"></div>
-        <p class="history-empty" id="history-empty">Добавьте первый приём пищи</p>
-        <ul class="history-list hidden" id="history-list"></ul>
-      </section>
+
+        <div class="card">
+          <div class="water-header">
+            <h2>💧 Вода</h2>
+            <span id="water-text">0 / 2000 мл</span>
+          </div>
+          <div class="water-progress-track">
+            <div class="water-progress-fill" id="water-fill" style="width:0%"></div>
+          </div>
+          <div class="water-buttons">
+            <button class="btn-water" onclick="addWater(150)">+150 мл</button>
+            <button class="btn-water" onclick="addWater(250)">+250 мл</button>
+            <button class="btn-water" onclick="addWater(350)">+350 мл</button>
+            <button class="btn-water btn-water-reset" onclick="resetWater()">Сброс</button>
+          </div>
+        </div>
+
+        <div class="card" id="history-section">
+          <div class="history-header">
+            <h2>Приёмы пищи</h2>
+            <button class="btn-clear-history" id="btn-clear-history">Очистить</button>
+          </div>
+          <p class="history-empty" id="history-empty">Добавьте первый приём пищи</p>
+          <ul class="history-list hidden" id="history-list"></ul>
+        </div>
+      </div>
+
+      <!-- ── TAB: Вес ── -->
+      <div class="tab-content" id="tab-weight">
+        <div class="card">
+          <h2>Записать вес</h2>
+          <div class="weight-input-row">
+            <input type="number" id="weight-input" placeholder="70.5" step="0.1" min="30" max="300" />
+            <span class="weight-unit">кг</span>
+            <button class="btn-save-weight" id="btn-save-weight">Сохранить</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>График</h2>
+          <canvas id="weight-chart" height="200"></canvas>
+          <p class="weight-empty hidden" id="weight-empty">Нет данных. Начните записывать вес.</p>
+        </div>
+        <div class="card">
+          <h2>История</h2>
+          <ul class="weight-log-list" id="weight-log-list"></ul>
+          <p class="weight-empty hidden" id="weight-log-empty">Записей нет</p>
+        </div>
+      </div>
+
+      <!-- ── TAB: Цели ── -->
+      <div class="tab-content" id="tab-goals">
+        <div class="card">
+          <h2>Дневные цели</h2>
+          <div class="goal-row">
+            <label>Калории (ккал)</label>
+            <input type="number" id="goal-cal" min="500" max="10000" placeholder="2000" />
+          </div>
+          <div class="goal-row">
+            <label>Белки (г)</label>
+            <input type="number" id="goal-protein" min="0" max="500" placeholder="80" />
+          </div>
+          <div class="goal-row">
+            <label>Жиры (г)</label>
+            <input type="number" id="goal-fat" min="0" max="500" placeholder="65" />
+          </div>
+          <div class="goal-row">
+            <label>Углеводы (г)</label>
+            <input type="number" id="goal-carbs" min="0" max="1000" placeholder="250" />
+          </div>
+          <div class="goal-row">
+            <label>Вода (мл)</label>
+            <input type="number" id="goal-water" min="500" max="10000" placeholder="2000" />
+          </div>
+          <button class="btn-save-goals" id="btn-save-goals">Сохранить цели</button>
+          <p class="goals-saved hidden" id="goals-saved">✓ Сохранено</p>
+        </div>
+      </div>
+
     </main>
+
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-tab="tab-analyze">
+        <span class="nav-icon">📷</span>
+        <span>Анализ</span>
+      </button>
+      <button class="nav-btn" data-tab="tab-diary">
+        <span class="nav-icon">📋</span>
+        <span>Дневник</span>
+      </button>
+      <button class="nav-btn" data-tab="tab-weight">
+        <span class="nav-icon">⚖️</span>
+        <span>Вес</span>
+      </button>
+      <button class="nav-btn" data-tab="tab-goals">
+        <span class="nav-icon">🎯</span>
+        <span>Цели</span>
+      </button>
+    </nav>
+
     <footer class="footer">
       <p>Данные носят приблизительный характер. Для точного подсчёта рекомендуется взвешивать продукты.</p>
     </footer>
   </div>
+
+  <!-- Modal: Ручной ввод -->
+  <div class="modal-overlay hidden" id="modal-manual">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Добавить блюдо</h3>
+        <button class="modal-close" id="modal-manual-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label>Название блюда</label>
+          <input type="text" id="manual-name" placeholder="Например: гречка с котлетой" autocomplete="off" />
+        </div>
+        <div class="form-row">
+          <label>Вес / порция (г)</label>
+          <input type="number" id="manual-weight" placeholder="350" min="1" />
+        </div>
+        <button class="btn-modal-calc" id="btn-manual-calc">🤖 Рассчитать КБЖУ</button>
+
+        <div class="manual-loading hidden" id="manual-loading">
+          <div class="spinner-small"></div>
+          <span>ИИ считает калории...</span>
+        </div>
+        <p class="manual-error hidden" id="manual-error"></p>
+
+        <div class="manual-result hidden" id="manual-result">
+          <div class="manual-result-calories" id="manual-result-cal"></div>
+          <div class="manual-result-macros" id="manual-result-macros"></div>
+          <p class="manual-result-note" id="manual-result-note"></p>
+          <button class="btn-modal-save" id="btn-manual-save">Добавить в дневник</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Сканер штрих-кода -->
+  <div class="modal-overlay hidden" id="modal-barcode">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Сканер штрих-кода</h3>
+        <button class="modal-close" id="modal-barcode-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="barcode-reader"></div>
+        <p class="barcode-hint" id="barcode-hint">Наведите камеру на штрих-код продукта</p>
+        <div id="barcode-result" class="hidden">
+          <p class="barcode-product-name" id="barcode-product-name"></p>
+          <p class="barcode-per100" id="barcode-per100"></p>
+          <div class="barcode-macros">
+            <span id="barcode-cal"></span>
+            <span id="barcode-protein"></span>
+            <span id="barcode-fat"></span>
+            <span id="barcode-carbs"></span>
+          </div>
+          <div class="barcode-inputs">
+            <div class="form-row">
+              <label>Масса упаковки (г)</label>
+              <input type="number" id="barcode-package" placeholder="450" min="1" />
+            </div>
+            <div class="form-row">
+              <label>Съедено (г)</label>
+              <input type="number" id="barcode-portion" value="100" min="1" />
+            </div>
+          </div>
+          <div class="barcode-total" id="barcode-total-preview">—</div>
+          <button class="btn-modal-save" id="btn-barcode-add">Добавить в дневник</button>
+        </div>
+        <p class="barcode-error hidden" id="barcode-error"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
