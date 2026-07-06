@@ -1,10 +1,25 @@
 // ── Storage keys ──────────────────────────────────────────────────────────────
-const HISTORY_KEY = 'kaloriskan_history';
-const GOALS_KEY   = 'kaloriskan_goals';
-const WATER_KEY   = 'kaloriskan_water';
-const WEIGHT_KEY  = 'kaloriskan_weight';
+const HISTORY_KEY   = 'kaloriskan_history';
+const GOALS_KEY      = 'kaloriskan_goals';
+const WATER_KEY      = 'kaloriskan_water';
+const WEIGHT_KEY     = 'kaloriskan_weight';
+const DEVICE_ID_KEY  = 'kaloriskan_device_id';
 
 const DEFAULT_GOALS = { cal: 2000, protein: 80, fat: 65, carbs: 250, water: 2000 };
+
+// TODO: подставить реальную цену и ссылку на оплату ЮKassa после того, как они определены
+const SUBSCRIPTION_PRICE_RUB = 299;
+const PAYMENT_LINK = 'https://yookassa.ru/my/i/REPLACE_ME/l';
+
+// ── Device ID (заменяет полноценные аккаунты на старте) ────────────────────────
+function getDeviceId() {
+  let id = localStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    id = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}
 
 // ── Date ──────────────────────────────────────────────────────────────────────
 function getTodayKey() {
@@ -337,9 +352,14 @@ document.getElementById('btn-manual-calc').addEventListener('click', async () =>
     const res  = await fetch('/lookup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, weight })
+      body: JSON.stringify({ name, weight, device_id: getDeviceId() })
     });
     const data = await res.json();
+    if (res.status === 402) {
+      closeManualModal();
+      showPaywall(data.used, data.limit);
+      return;
+    }
     if (!res.ok) throw new Error(data.error || 'Ошибка сервера');
 
     manualData = { ...data, name, weight };
@@ -504,6 +524,7 @@ const resultsSection = document.getElementById('results-section');
 const loadingCard    = document.getElementById('loading-card');
 const resultCard     = document.getElementById('result-card');
 const errorCard      = document.getElementById('error-card');
+const paywallCard    = document.getElementById('paywall-card');
 
 let currentFile = null;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -555,6 +576,7 @@ function hideAll() {
   loadingCard.classList.add('hidden');
   resultCard.classList.add('hidden');
   errorCard.classList.add('hidden');
+  paywallCard.classList.add('hidden');
 }
 
 btnAnalyze.addEventListener('click', analyzeImage);
@@ -566,14 +588,19 @@ async function analyzeImage() {
   loadingCard.classList.remove('hidden');
   resultCard.classList.add('hidden');
   errorCard.classList.add('hidden');
+  paywallCard.classList.add('hidden');
   try {
-    const base64   = await toBase64(currentFile);
+    const base64   = await resizeImage(currentFile);
     const response = await fetch('/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: base64, mime_type: currentFile.type })
+      body: JSON.stringify({ image: base64, mime_type: 'image/jpeg', device_id: getDeviceId() })
     });
     const data = await response.json();
+    if (response.status === 402) {
+      showPaywall(data.used, data.limit);
+      return;
+    }
     if (!response.ok) throw new Error(data.error || 'Ошибка сервера');
     saveMeal(data);
     showResult(data);
@@ -585,12 +612,29 @@ async function analyzeImage() {
   }
 }
 
-function toBase64(file) {
+const RESIZE_MAX_DIMENSION = 1568;
+const RESIZE_JPEG_QUALITY  = 0.85;
+
+function resizeImage(file) {
   return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = e => resolve(e.target.result.split(',')[1]);
-    r.onerror = reject;
-    r.readAsDataURL(file);
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const scale  = Math.min(1, RESIZE_MAX_DIMENSION / Math.max(img.width, img.height));
+        const width  = Math.round(img.width * scale);
+        const height = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width  = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', RESIZE_JPEG_QUALITY).split(',')[1]);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
 }
 
@@ -616,6 +660,49 @@ function showError(title, message) {
   document.getElementById('error-message').textContent = message;
   errorCard.classList.remove('hidden');
 }
+
+// ── Paywall ───────────────────────────────────────────────────────────────────
+function showPaywall(used, limit) {
+  resultsSection.classList.remove('hidden');
+  hideAll();
+  document.getElementById('paywall-used').textContent  = used ?? '';
+  document.getElementById('paywall-limit').textContent = limit ?? '';
+  document.getElementById('paywall-price').textContent = `${SUBSCRIPTION_PRICE_RUB} ₽ / 30 дней безлимита`;
+  document.getElementById('paywall-device-id').textContent = getDeviceId();
+  document.getElementById('promo-input').value = '';
+  document.getElementById('promo-message').classList.add('hidden');
+  paywallCard.classList.remove('hidden');
+}
+
+document.getElementById('btn-promo-apply').addEventListener('click', async () => {
+  const code = document.getElementById('promo-input').value.trim();
+  const msgEl = document.getElementById('promo-message');
+  if (!code) return;
+  try {
+    const res  = await fetch('/promo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_id: getDeviceId(), code })
+    });
+    const data = await res.json();
+    msgEl.textContent = res.ok ? 'Промокод применён — лимит увеличен!' : (data.error || 'Не удалось применить промокод');
+    msgEl.classList.toggle('promo-message-error', !res.ok);
+    msgEl.classList.remove('hidden');
+  } catch (err) {
+    msgEl.textContent = 'Ошибка сети, попробуйте ещё раз';
+    msgEl.classList.add('promo-message-error');
+    msgEl.classList.remove('hidden');
+  }
+});
+
+document.getElementById('btn-paywall-buy').addEventListener('click', () => {
+  fetch('/event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device_id: getDeviceId(), type: 'buy_click' })
+  }).catch(() => {});
+  window.open(PAYMENT_LINK, '_blank');
+});
 
 document.getElementById('btn-clear-history').addEventListener('click', clearTodayHistory);
 

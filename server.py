@@ -7,12 +7,31 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
+import db
+
 load_dotenv()
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)
 
 client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+
+ADMIN_SECRET = os.environ.get('ADMIN_SECRET')
+
+DEVICE_ID_RE = re.compile(r'^[A-Za-z0-9_-]{8,128}$')
+
+db.init_db()
+
+
+def get_device_id(data):
+    device_id = (data.get('device_id') or request.headers.get('X-Device-Id') or '').strip()
+    if not DEVICE_ID_RE.match(device_id):
+        return None
+    return device_id
+
+
+def require_admin():
+    return ADMIN_SECRET and request.headers.get('X-Admin-Secret') == ADMIN_SECRET
 
 SYSTEM_PROMPT = """Ты — эксперт-диетолог и нутрициолог. Твоя задача — анализировать фотографии еды и возвращать данные о калориях и питательных веществах строго в формате JSON.
 
@@ -66,6 +85,15 @@ def lookup():
     except (ValueError, TypeError):
         return jsonify({'error': 'Некорректный вес'}), 400
 
+    device_id = get_device_id(data)
+    if not device_id:
+        return jsonify({'error': 'Некорректный device_id'}), 400
+
+    allowed, used, limit = db.check_and_increment_usage(device_id)
+    if not allowed:
+        db.log_event('paywall_shown', device_id)
+        return jsonify({'error': 'limit_exceeded', 'used': used, 'limit': limit}), 402
+
     try:
         message = client.messages.create(
             model='claude-haiku-4-5-20251001',
@@ -118,9 +146,18 @@ def analyze():
     if len(image_b64) > MAX_IMAGE_B64_LEN:
         return jsonify({'error': 'Изображение слишком большое. Максимальный размер — 10 МБ.'}), 413
 
-    allowed = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
-    if mime_type not in allowed:
+    allowed_mime = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
+    if mime_type not in allowed_mime:
         mime_type = 'image/jpeg'
+
+    device_id = get_device_id(data)
+    if not device_id:
+        return jsonify({'error': 'Некорректный device_id'}), 400
+
+    allowed, used, limit = db.check_and_increment_usage(device_id)
+    if not allowed:
+        db.log_event('paywall_shown', device_id)
+        return jsonify({'error': 'limit_exceeded', 'used': used, 'limit': limit}), 402
 
     try:
         message = client.messages.create(
@@ -175,6 +212,62 @@ def analyze():
         return jsonify({'error': 'ИИ вернул некорректный JSON. Попробуйте ещё раз.'}), 500
     except Exception as e:
         return jsonify({'error': f'Внутренняя ошибка: {str(e)}'}), 500
+
+
+@app.route('/promo', methods=['POST'])
+def apply_promo():
+    data = request.get_json() or {}
+    device_id = get_device_id(data)
+    code = (data.get('code') or '').strip()
+    if not device_id or not code:
+        return jsonify({'error': 'Укажите промокод'}), 400
+    if not db.set_promo_code(device_id, code):
+        return jsonify({'error': 'Промокод не найден'}), 404
+    return jsonify({'ok': True})
+
+
+@app.route('/event', methods=['POST'])
+def track_event():
+    data = request.get_json() or {}
+    device_id = get_device_id(data)
+    event_type = (data.get('type') or '').strip()
+    if not device_id or event_type not in {'buy_click'}:
+        return jsonify({'error': 'Некорректный запрос'}), 400
+    db.log_event(event_type, device_id)
+    return jsonify({'ok': True})
+
+
+@app.route('/admin/grant', methods=['POST'])
+def admin_grant():
+    if not require_admin():
+        return jsonify({'error': 'forbidden'}), 403
+    data = request.get_json() or {}
+    device_id = (data.get('device_id') or '').strip()
+    email = (data.get('email') or '').strip() or None
+    try:
+        days = int(data.get('days', 30))
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Некорректное число дней'}), 400
+    if not device_id:
+        return jsonify({'error': 'device_id обязателен'}), 400
+    db.grant_pro(device_id, email, days)
+    db.log_event('payment_granted', device_id)
+    return jsonify({'ok': True})
+
+
+@app.route('/admin/recover', methods=['POST'])
+def admin_recover():
+    if not require_admin():
+        return jsonify({'error': 'forbidden'}), 403
+    data = request.get_json() or {}
+    email = (data.get('email') or '').strip()
+    new_device_id = (data.get('device_id') or '').strip()
+    if not email or not new_device_id:
+        return jsonify({'error': 'email и device_id обязательны'}), 400
+    if not db.recover_pro(email, new_device_id):
+        return jsonify({'error': 'Активная подписка для этого email не найдена'}), 404
+    db.log_event('access_recovered', new_device_id)
+    return jsonify({'ok': True})
 
 
 if __name__ == '__main__':

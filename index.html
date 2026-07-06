@@ -90,6 +90,22 @@
             <p id="error-message"></p>
             <button class="btn-new" id="btn-retry">Попробовать снова</button>
           </div>
+          <div class="paywall-card hidden" id="paywall-card">
+            <div class="paywall-icon">🔒</div>
+            <h3>Бесплатные сканы закончились</h3>
+            <p>Использовано <span id="paywall-used"></span> из <span id="paywall-limit"></span> бесплатных сканов на сегодня</p>
+
+            <div class="promo-row">
+              <input type="text" id="promo-input" placeholder="Есть промокод?" autocomplete="off" />
+              <button class="btn-quick" id="btn-promo-apply">Применить</button>
+            </div>
+            <p class="promo-message hidden" id="promo-message"></p>
+
+            <div class="paywall-price" id="paywall-price"></div>
+            <button class="btn-analyze" id="btn-paywall-buy">Оформить безлимит</button>
+            <p class="paywall-id-hint">Ваш ID для сверки оплаты: <code id="paywall-device-id"></code> — укажите его в комментарии к платежу</p>
+            <p class="paywall-contact">Уже оплатили? Доступ откроется в течение нескольких часов. Вопросы — <a href="https://t.me/CaloryScan" target="_blank">Telegram</a></p>
+          </div>
         </div>
       </div>
 

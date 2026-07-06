@@ -448,6 +448,42 @@ body {
 /* ── Footer ── */
 .footer { padding: 16px 20px; text-align: center; color: var(--text3); font-size: 11px; line-height: 1.5; }
 
+/* ── Paywall ── */
+.paywall-card {
+  background: var(--card); border-radius: 16px; border: 1px solid var(--sep);
+  padding: 32px 24px; text-align: center;
+}
+.paywall-icon { font-size: 40px; margin-bottom: 10px; }
+.paywall-card h3 { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+.paywall-card p { color: var(--text2); font-size: 14px; line-height: 1.5; }
+
+.promo-row {
+  display: flex; gap: 8px; margin: 20px 0 6px;
+}
+.promo-row input {
+  flex: 1; padding: 12px 14px; border: 1px solid var(--sep); border-radius: 12px;
+  font-size: 15px; color: var(--text); background: var(--bg); outline: none;
+}
+.promo-row input:focus { border-color: var(--accent); }
+.promo-row .btn-quick {
+  padding: 0 14px; font-weight: 600;
+}
+.promo-message { font-size: 13px; color: var(--accent); margin-bottom: 6px; }
+.promo-message-error { color: var(--red); }
+
+.paywall-price {
+  font-size: 22px; font-weight: 700; color: var(--text);
+  margin: 20px 0 12px;
+}
+.paywall-id-hint {
+  font-size: 12px; color: var(--text2); margin-top: 14px;
+}
+.paywall-id-hint code {
+  background: var(--bg); border-radius: 6px; padding: 2px 6px; font-size: 12px;
+}
+.paywall-contact { font-size: 12px; margin-top: 8px; }
+.paywall-contact a { color: var(--accent); }
+
 .hidden { display: none !important; }
 
 /* ── Mobile ── */
