@@ -7,8 +7,8 @@ const DEVICE_ID_KEY  = 'kaloriskan_device_id';
 
 const DEFAULT_GOALS = { cal: 2000, protein: 80, fat: 65, carbs: 250, water: 2000 };
 
-// TODO: подставить реальную цену и ссылку на оплату ЮKassa после того, как они определены
-const SUBSCRIPTION_PRICE_RUB = 299;
+// TODO: подставить реальную ссылку на оплату (СБП/ЮKassa) после того, как она определена
+const SUBSCRIPTION_PRICE_RUB = 99;
 const PAYMENT_LINK = 'https://yookassa.ru/my/i/REPLACE_ME/l';
 
 // ── Device ID (заменяет полноценные аккаунты на старте) ────────────────────────
@@ -662,16 +662,29 @@ function showError(title, message) {
 }
 
 // ── Paywall ───────────────────────────────────────────────────────────────────
-function showPaywall(used, limit) {
+async function showPaywall(used, limit) {
   resultsSection.classList.remove('hidden');
   hideAll();
   document.getElementById('paywall-used').textContent  = used ?? '';
   document.getElementById('paywall-limit').textContent = limit ?? '';
-  document.getElementById('paywall-price').textContent = `${SUBSCRIPTION_PRICE_RUB} ₽ / 30 дней безлимита`;
+  document.getElementById('paywall-price').textContent = `${SUBSCRIPTION_PRICE_RUB} ₽ / месяц безлимита`;
   document.getElementById('paywall-device-id').textContent = getDeviceId();
   document.getElementById('promo-input').value = '';
   document.getElementById('promo-message').classList.add('hidden');
   paywallCard.classList.remove('hidden');
+
+  const openBlock     = document.getElementById('paywall-open-block');
+  const closedMessage = document.getElementById('paywall-closed-message');
+  try {
+    const res    = await fetch('/payment_status');
+    const status = await res.json();
+    openBlock.classList.toggle('hidden', !status.accepting);
+    closedMessage.classList.toggle('hidden', status.accepting);
+  } catch (err) {
+    // если статус недоступен — по умолчанию считаем приём открытым
+    openBlock.classList.remove('hidden');
+    closedMessage.classList.add('hidden');
+  }
 }
 
 document.getElementById('btn-promo-apply').addEventListener('click', async () => {

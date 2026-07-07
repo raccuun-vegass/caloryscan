@@ -250,9 +250,22 @@ def admin_grant():
         return jsonify({'error': 'Некорректное число дней'}), 400
     if not device_id:
         return jsonify({'error': 'device_id обязателен'}), 400
-    db.grant_pro(device_id, email, days)
+    try:
+        db.grant_pro(device_id, email, days)
+    except RuntimeError:
+        return jsonify({'error': 'Лимит платежей до регистрации самозанятости достигнут'}), 423
     db.log_event('payment_granted', device_id)
     return jsonify({'ok': True})
+
+
+@app.route('/payment_status', methods=['GET'])
+def payment_status():
+    granted = db.count_payments_granted()
+    return jsonify({
+        'accepting': granted < db.MAX_PAYMENTS_BEFORE_REGISTRATION,
+        'granted': granted,
+        'limit': db.MAX_PAYMENTS_BEFORE_REGISTRATION,
+    })
 
 
 @app.route('/admin/recover', methods=['POST'])

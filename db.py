@@ -4,6 +4,11 @@ import psycopg2
 FREE_LIMIT_DEFAULT = 3
 FREE_LIMIT_PROMO = 10
 
+# Первые платежи принимаются напрямую по СБП (личный перевод, без самозанятости).
+# После этого числа приём приостанавливается до регистрации самозанятости —
+# см. план разработки.md.
+MAX_PAYMENTS_BEFORE_REGISTRATION = 17
+
 
 def get_conn():
     return psycopg2.connect(os.environ['DATABASE_URL'])
@@ -146,7 +151,24 @@ def check_and_increment_usage(device_id):
         conn.close()
 
 
+def count_payments_granted():
+    conn = get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM events WHERE type = 'payment_granted'")
+            return cur.fetchone()[0]
+    finally:
+        conn.close()
+
+
+def accepting_payments():
+    return count_payments_granted() < MAX_PAYMENTS_BEFORE_REGISTRATION
+
+
 def grant_pro(device_id, email, days=30):
+    """Raises RuntimeError if the pre-registration payment limit has been reached."""
+    if not accepting_payments():
+        raise RuntimeError('payment_limit_reached')
     conn = get_conn()
     try:
         with conn.cursor() as cur:

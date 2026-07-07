@@ -505,6 +505,10 @@ body {
 .paywall-contact { font-size: 12px; margin-top: 8px; }
 .paywall-contact a { color: var(--accent); }
 
+.paywall-closed-message {
+  font-size: 14px; color: var(--text2); margin-top: 20px; line-height: 1.5;
+}
+
 .hidden { display: none !important; }
 
 /* ── Mobile ── */
