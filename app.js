@@ -708,7 +708,25 @@ document.getElementById('btn-promo-apply').addEventListener('click', async () =>
   }
 });
 
-document.getElementById('btn-paywall-buy').addEventListener('click', () => {
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+document.getElementById('btn-paywall-buy').addEventListener('click', async () => {
+  const email = document.getElementById('paywall-email').value.trim();
+  const errorEl = document.getElementById('paywall-email-error');
+  if (!EMAIL_RE.test(email)) {
+    errorEl.classList.remove('hidden');
+    return;
+  }
+  errorEl.classList.add('hidden');
+
+  try {
+    await fetch('/save_email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_id: getDeviceId(), email })
+    });
+  } catch (err) { /* не блокируем оплату, если сеть подвела */ }
+
   fetch('/event', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

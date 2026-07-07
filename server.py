@@ -19,6 +19,7 @@ client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
 ADMIN_SECRET = os.environ.get('ADMIN_SECRET')
 
 DEVICE_ID_RE = re.compile(r'^[A-Za-z0-9_-]{8,128}$')
+EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 
 db.init_db()
 
@@ -223,6 +224,17 @@ def apply_promo():
         return jsonify({'error': 'Укажите промокод'}), 400
     if not db.set_promo_code(device_id, code):
         return jsonify({'error': 'Промокод не найден'}), 404
+    return jsonify({'ok': True})
+
+
+@app.route('/save_email', methods=['POST'])
+def save_email():
+    data = request.get_json() or {}
+    device_id = get_device_id(data)
+    email = (data.get('email') or '').strip()
+    if not device_id or not EMAIL_RE.match(email):
+        return jsonify({'error': 'Укажите корректный email'}), 400
+    db.set_device_email(device_id, email)
     return jsonify({'ok': True})
 
 

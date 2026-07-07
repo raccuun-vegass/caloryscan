@@ -11,7 +11,7 @@ MAX_PAYMENTS_BEFORE_REGISTRATION = 17
 
 
 def get_conn():
-    return psycopg2.connect(os.environ['DATABASE_URL'])
+    return psycopg2.connect(os.environ['DATABASE_URL'], connect_timeout=10)
 
 
 def init_db():
@@ -22,9 +22,11 @@ def init_db():
                 CREATE TABLE IF NOT EXISTS devices (
                     device_id TEXT PRIMARY KEY,
                     promo_code TEXT,
+                    email TEXT,
                     first_seen TIMESTAMPTZ NOT NULL DEFAULT now()
                 )
             """)
+            cur.execute("ALTER TABLE devices ADD COLUMN IF NOT EXISTS email TEXT")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS usage_log (
                     device_id TEXT NOT NULL,
@@ -63,19 +65,30 @@ def init_db():
         conn.close()
 
 
-def touch_device(device_id):
-    """Ensure a devices row exists; return current promo_code (or None)."""
+def _touch_device(cur, device_id):
+    """Ensure a devices row exists on the given cursor; return current promo_code (or None)."""
+    cur.execute(
+        "INSERT INTO devices (device_id) VALUES (%s) ON CONFLICT (device_id) DO NOTHING",
+        (device_id,)
+    )
+    cur.execute("SELECT promo_code FROM devices WHERE device_id = %s", (device_id,))
+    row = cur.fetchone()
+    return row[0] if row else None
+
+
+def set_device_email(device_id, email):
+    """Associate an email with a device before payment, so /admin/grant can
+    auto-fill it later — the admin only has the device_id from the payment
+    comment, not the email, when confirming a manual SBP transfer."""
     conn = get_conn()
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO devices (device_id) VALUES (%s) ON CONFLICT (device_id) DO NOTHING",
-                (device_id,)
+                "INSERT INTO devices (device_id, email) VALUES (%s, %s) "
+                "ON CONFLICT (device_id) DO UPDATE SET email = EXCLUDED.email",
+                (device_id, email)
             )
-            cur.execute("SELECT promo_code FROM devices WHERE device_id = %s", (device_id,))
-            row = cur.fetchone()
         conn.commit()
-        return row[0] if row else None
     finally:
         conn.close()
 
@@ -99,7 +112,15 @@ def set_promo_code(device_id, code):
         conn.close()
 
 
-def is_pro(device_id):
+def check_and_increment_usage(device_id):
+    """
+    Returns (allowed: bool, used: int, limit: int).
+    Atomically increments today's count and checks it against the limit —
+    a separate SELECT-then-UPDATE would race under concurrent requests
+    (e.g. a double-tap or two open tabs) and let more than `limit` through.
+    Runs on a single connection (this is called on every scan — /analyze and
+    /lookup — so connection overhead here matters more than anywhere else).
+    """
     conn = get_conn()
     try:
         with conn.cursor() as cur:
@@ -107,27 +128,13 @@ def is_pro(device_id):
                 "SELECT 1 FROM subscriptions WHERE device_id = %s AND pro_until > now() LIMIT 1",
                 (device_id,)
             )
-            return cur.fetchone() is not None
-    finally:
-        conn.close()
+            if cur.fetchone() is not None:
+                conn.commit()
+                return True, 0, None
 
+            promo_code = _touch_device(cur, device_id)
+            limit = FREE_LIMIT_PROMO if promo_code else FREE_LIMIT_DEFAULT
 
-def check_and_increment_usage(device_id):
-    """
-    Returns (allowed: bool, used: int, limit: int).
-    Atomically increments today's count and checks it against the limit —
-    a separate SELECT-then-UPDATE would race under concurrent requests
-    (e.g. a double-tap or two open tabs) and let more than `limit` through.
-    """
-    if is_pro(device_id):
-        return True, 0, None
-
-    promo_code = touch_device(device_id)
-    limit = FREE_LIMIT_PROMO if promo_code else FREE_LIMIT_DEFAULT
-
-    conn = get_conn()
-    try:
-        with conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO usage_log (device_id, day, scans_count) VALUES (%s, CURRENT_DATE, 1) "
                 "ON CONFLICT (device_id, day) DO UPDATE SET scans_count = usage_log.scans_count + 1 "
@@ -161,17 +168,20 @@ def count_payments_granted():
         conn.close()
 
 
-def accepting_payments():
-    return count_payments_granted() < MAX_PAYMENTS_BEFORE_REGISTRATION
-
-
 def grant_pro(device_id, email, days=30):
     """Raises RuntimeError if the pre-registration payment limit has been reached."""
-    if not accepting_payments():
-        raise RuntimeError('payment_limit_reached')
     conn = get_conn()
     try:
         with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM events WHERE type = 'payment_granted'")
+            if cur.fetchone()[0] >= MAX_PAYMENTS_BEFORE_REGISTRATION:
+                raise RuntimeError('payment_limit_reached')
+
+            if not email:
+                cur.execute("SELECT email FROM devices WHERE device_id = %s", (device_id,))
+                row = cur.fetchone()
+                email = row[0] if row else None
+
             cur.execute(
                 "INSERT INTO subscriptions (device_id, email, pro_until) "
                 "VALUES (%s, %s, now() + (%s || ' days')::interval)",

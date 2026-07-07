@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>КалориСкан — админка</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; color: #000; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 16px; margin-top: 32px; margin-bottom: 8px; }
+  label { display: block; font-size: 12px; font-weight: 600; color: #666; margin-top: 10px; }
+  input { display: block; width: 100%; padding: 10px; margin-top: 4px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+  button { margin-top: 14px; padding: 10px 18px; background: #34C759; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 15px; }
+  button:active { opacity: 0.8; }
+  #status { margin-top: 16px; font-size: 14px; white-space: pre-wrap; padding: 10px; border-radius: 8px; }
+  #status.ok { background: #eafff0; color: #16a34a; }
+  #status.err { background: #fff0f0; color: #dc2626; }
+  #payment-status { font-size: 14px; color: #666; margin-top: 12px; padding: 10px; background: #f2f2f7; border-radius: 8px; }
+  hr { margin: 28px 0; border: none; border-top: 1px solid #e5e5ea; }
+</style>
+</head>
+<body>
+  <h1>КалориСкан — админка</h1>
+
+  <label>Admin secret</label>
+  <input type="password" id="secret" placeholder="X-Admin-Secret" />
+
+  <div id="payment-status">Загрузка статуса приёма платежей…</div>
+
+  <hr />
+
+  <h2>Выдать доступ (после подтверждённой оплаты)</h2>
+  <label>device_id (из комментария к СБП-переводу)</label>
+  <input type="text" id="grant-device-id" />
+  <label>email (необязательно — подставится сам, если человек указал его на пейволле)</label>
+  <input type="email" id="grant-email" />
+  <label>Дней доступа</label>
+  <input type="number" id="grant-days" value="30" />
+  <button id="btn-grant">Выдать доступ</button>
+
+  <hr />
+
+  <h2>Восстановить доступ (смена устройства)</h2>
+  <label>email плательщика</label>
+  <input type="email" id="recover-email" />
+  <label>новый device_id</label>
+  <input type="text" id="recover-device-id" />
+  <button id="btn-recover">Восстановить</button>
+
+  <div id="status"></div>
+
+<script>
+  const secretInput = document.getElementById('secret');
+  secretInput.value = localStorage.getItem('kaloriskan_admin_secret') || '';
+  secretInput.addEventListener('change', () => localStorage.setItem('kaloriskan_admin_secret', secretInput.value));
+
+  function log(msg, ok) {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = ok ? 'ok' : 'err';
+  }
+
+  async function loadPaymentStatus() {
+    const el = document.getElementById('payment-status');
+    try {
+      const res = await fetch('/payment_status');
+      const data = await res.json();
+      el.textContent = `Платежей выдано: ${data.granted} / ${data.limit} — приём ${data.accepting ? 'ОТКРЫТ' : 'ЗАКРЫТ'}`;
+    } catch (e) {
+      el.textContent = 'Не удалось загрузить статус приёма платежей';
+    }
+  }
+  loadPaymentStatus();
+
+  document.getElementById('btn-grant').addEventListener('click', async () => {
+    const device_id = document.getElementById('grant-device-id').value.trim();
+    const email = document.getElementById('grant-email').value.trim();
+    const days = document.getElementById('grant-days').value.trim();
+    if (!device_id) { log('Укажите device_id', false); return; }
+    const btn = document.getElementById('btn-grant');
+    btn.disabled = true;
+    const originalLabel = btn.textContent;
+    btn.textContent = 'Отправка…';
+    log('Отправка запроса, подождите…', true);
+    try {
+      const res = await fetch('/admin/grant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': secretInput.value },
+        body: JSON.stringify({ device_id, email: email || undefined, days: days ? Number(days) : 30 })
+      });
+      const data = await res.json();
+      log(res.ok ? `Готово — доступ выдан для ${device_id}` : `Ошибка: ${data.error}`, res.ok);
+      if (res.ok) {
+        document.getElementById('grant-device-id').value = '';
+        document.getElementById('grant-email').value = '';
+      }
+      loadPaymentStatus();
+    } catch (e) {
+      log('Ошибка сети: ' + e.message, false);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
+  });
+
+  document.getElementById('btn-recover').addEventListener('click', async () => {
+    const email = document.getElementById('recover-email').value.trim();
+    const device_id = document.getElementById('recover-device-id').value.trim();
+    if (!email || !device_id) { log('Укажите email и новый device_id', false); return; }
+    const btn = document.getElementById('btn-recover');
+    btn.disabled = true;
+    const originalLabel = btn.textContent;
+    btn.textContent = 'Отправка…';
+    log('Отправка запроса, подождите…', true);
+    try {
+      const res = await fetch('/admin/recover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': secretInput.value },
+        body: JSON.stringify({ email, device_id })
+      });
+      const data = await res.json();
+      log(res.ok ? `Готово — доступ восстановлен на ${device_id}` : `Ошибка: ${data.error}`, res.ok);
+      if (res.ok) {
+        document.getElementById('recover-email').value = '';
+        document.getElementById('recover-device-id').value = '';
+      }
+    } catch (e) {
+      log('Ошибка сети: ' + e.message, false);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
+  });
+</script>
+</body>
+</html>
