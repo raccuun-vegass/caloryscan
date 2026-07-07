@@ -706,8 +706,53 @@ document.getElementById('btn-paywall-buy').addEventListener('click', () => {
 
 document.getElementById('btn-clear-history').addEventListener('click', clearTodayHistory);
 
+// ── PWA install banner ──────────────────────────────────────────────────────────
+const INSTALL_DISMISSED_KEY = 'kaloriskan_install_dismissed';
+let deferredInstallPrompt = null;
+
+function isStandalonePwa() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function initInstallBanner() {
+  if (isStandalonePwa() || localStorage.getItem(INSTALL_DISMISSED_KEY)) return;
+
+  const banner = document.getElementById('install-banner');
+  const textEl = document.getElementById('install-banner-instructions');
+  const btn    = document.getElementById('install-banner-btn');
+  const isIOS     = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isAndroid = /Android/.test(navigator.userAgent);
+
+  if (isIOS) {
+    textEl.textContent = 'Нажмите «Поделиться» ⬆️ внизу экрана и выберите «На экран «Домой»»';
+    banner.classList.remove('hidden');
+  } else if (isAndroid) {
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      textEl.textContent = 'Быстрый доступ с главного экрана, без браузера';
+      btn.classList.remove('hidden');
+      banner.classList.remove('hidden');
+    });
+  }
+}
+
+document.getElementById('install-banner-close').addEventListener('click', () => {
+  localStorage.setItem(INSTALL_DISMISSED_KEY, '1');
+  document.getElementById('install-banner').classList.add('hidden');
+});
+
+document.getElementById('install-banner-btn').addEventListener('click', async () => {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  document.getElementById('install-banner').classList.add('hidden');
+});
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 renderDiary();
 renderGoalsForm();
+initInstallBanner();
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
