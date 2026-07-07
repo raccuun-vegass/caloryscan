@@ -7,9 +7,9 @@ const DEVICE_ID_KEY  = 'kaloriskan_device_id';
 
 const DEFAULT_GOALS = { cal: 2000, protein: 80, fat: 65, carbs: 250, water: 2000 };
 
-// TODO: подставить реальную ссылку на оплату (СБП/ЮKassa) после того, как она определена
 const SUBSCRIPTION_PRICE_RUB = 99;
-const PAYMENT_LINK = 'https://yookassa.ru/my/i/REPLACE_ME/l';
+// Номер карты для оплаты хранится на сервере (PAYMENT_CARD_NUMBER в .env) и
+// подтягивается через /payment_info — чтобы не светить его в публичном коде.
 
 // ── Device ID (заменяет полноценные аккаунты на старте) ────────────────────────
 function getDeviceId() {
@@ -671,6 +671,7 @@ async function showPaywall(used, limit) {
   document.getElementById('paywall-device-id').textContent = getDeviceId();
   document.getElementById('promo-input').value = '';
   document.getElementById('promo-message').classList.add('hidden');
+  document.getElementById('paywall-card-number-block').classList.add('hidden');
   paywallCard.classList.remove('hidden');
 
   const openBlock     = document.getElementById('paywall-open-block');
@@ -732,7 +733,24 @@ document.getElementById('btn-paywall-buy').addEventListener('click', async () =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ device_id: getDeviceId(), type: 'buy_click' })
   }).catch(() => {});
-  window.open(PAYMENT_LINK, '_blank');
+
+  try {
+    const res  = await fetch('/payment_info');
+    const data = await res.json();
+    document.getElementById('paywall-card-number').textContent = data.card_number || 'Номер карты пока не настроен';
+    document.getElementById('paywall-copy-message').classList.add('hidden');
+    document.getElementById('paywall-card-number-block').classList.remove('hidden');
+  } catch (err) {
+    document.getElementById('paywall-card-number').textContent = 'Не удалось загрузить номер карты — напишите в Telegram';
+    document.getElementById('paywall-card-number-block').classList.remove('hidden');
+  }
+});
+
+document.getElementById('btn-copy-card').addEventListener('click', () => {
+  const cardNumber = document.getElementById('paywall-card-number').textContent;
+  navigator.clipboard.writeText(cardNumber).then(() => {
+    document.getElementById('paywall-copy-message').classList.remove('hidden');
+  }).catch(() => {});
 });
 
 document.getElementById('btn-clear-history').addEventListener('click', clearTodayHistory);

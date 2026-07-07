@@ -504,6 +504,18 @@ body {
 #paywall-email:focus { border-color: var(--accent); }
 .paywall-email-error { font-size: 13px; color: var(--red); margin-bottom: 10px; }
 
+.paywall-card-number {
+  margin-top: 14px; padding: 14px; background: var(--bg); border-radius: 12px;
+}
+.paywall-card-number-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.paywall-card-number-row code {
+  font-size: 17px; font-weight: 600; letter-spacing: 0.5px;
+}
+.paywall-card-number-row .btn-quick { padding: 0 10px; font-weight: 600; }
+.paywall-copy-message { font-size: 12px; color: var(--accent); margin-top: 6px; }
+
 .paywall-id-hint {
   font-size: 12px; color: var(--text2); margin-top: 14px;
 }

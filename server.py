@@ -17,6 +17,7 @@ CORS(app)
 client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
 
 ADMIN_SECRET = os.environ.get('ADMIN_SECRET')
+PAYMENT_CARD_NUMBER = os.environ.get('PAYMENT_CARD_NUMBER', '')
 
 DEVICE_ID_RE = re.compile(r'^[A-Za-z0-9_-]{8,128}$')
 EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
@@ -278,6 +279,11 @@ def payment_status():
         'granted': granted,
         'limit': db.MAX_PAYMENTS_BEFORE_REGISTRATION,
     })
+
+
+@app.route('/payment_info', methods=['GET'])
+def payment_info():
+    return jsonify({'card_number': PAYMENT_CARD_NUMBER})
 
 
 @app.route('/admin/recover', methods=['POST'])

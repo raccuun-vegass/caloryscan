@@ -1,4 +1,4 @@
-const CACHE = 'caloryscan-v9';
+const CACHE = 'caloryscan-v10';
 const ASSETS = ['/', '/app.js', '/style.css', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', e => {

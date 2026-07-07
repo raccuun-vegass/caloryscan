@@ -115,7 +115,16 @@
               <div class="paywall-price" id="paywall-price"></div>
               <input type="email" id="paywall-email" placeholder="Email — чтобы не потерять доступ" autocomplete="email" />
               <p class="paywall-email-error hidden" id="paywall-email-error">Укажите корректный email</p>
-              <button class="btn-analyze" id="btn-paywall-buy">Оформить безлимит</button>
+              <button class="btn-analyze" id="btn-paywall-buy">Показать номер карты для оплаты</button>
+
+              <div class="paywall-card-number hidden" id="paywall-card-number-block">
+                <div class="paywall-card-number-row">
+                  <code id="paywall-card-number"></code>
+                  <button class="btn-quick" id="btn-copy-card">Скопировать</button>
+                </div>
+                <p class="paywall-copy-message hidden" id="paywall-copy-message">Скопировано!</p>
+              </div>
+
               <p class="paywall-id-hint">Ваш ID для сверки оплаты: <code id="paywall-device-id"></code> — укажите его в комментарии к платежу</p>
               <p class="paywall-contact">Уже оплатили? Доступ откроется в течение нескольких часов. Вопросы — <a href="https://t.me/CaloryScan" target="_blank">Telegram</a></p>
             </div>
