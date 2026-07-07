@@ -278,6 +278,7 @@ def payment_status():
         'accepting': granted < db.MAX_PAYMENTS_BEFORE_REGISTRATION,
         'granted': granted,
         'limit': db.MAX_PAYMENTS_BEFORE_REGISTRATION,
+        'funnel': db.funnel_counts(),
     })
 
 

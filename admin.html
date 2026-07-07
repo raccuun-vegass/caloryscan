@@ -65,7 +65,12 @@
     try {
       const res = await fetch('/payment_status');
       const data = await res.json();
-      el.textContent = `Платежей выдано: ${data.granted} / ${data.limit} — приём ${data.accepting ? 'ОТКРЫТ' : 'ЗАКРЫТ'}`;
+      const f = data.funnel || {};
+      const conv = f.buy_click ? Math.round((f.payment_granted / f.buy_click) * 100) : 0;
+      el.innerHTML =
+        `Платежей выдано: ${data.granted} / ${data.limit} — приём ${data.accepting ? 'ОТКРЫТ' : 'ЗАКРЫТ'}<br>` +
+        `Воронка: показан пейволл ${f.paywall_shown ?? 0} → нажали «показать номер карты» ${f.buy_click ?? 0} → оплатили ${f.payment_granted ?? 0}` +
+        (f.buy_click ? ` (конверсия из клика в оплату: ${conv}%)` : '');
     } catch (e) {
       el.textContent = 'Не удалось загрузить статус приёма платежей';
     }

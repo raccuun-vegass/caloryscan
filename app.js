@@ -7,7 +7,7 @@ const DEVICE_ID_KEY  = 'kaloriskan_device_id';
 
 const DEFAULT_GOALS = { cal: 2000, protein: 80, fat: 65, carbs: 250, water: 2000 };
 
-const SUBSCRIPTION_PRICE_RUB = 99;
+const SUBSCRIPTION_PRICE_RUB = 190;
 // Номер карты для оплаты хранится на сервере (PAYMENT_CARD_NUMBER в .env) и
 // подтягивается через /payment_info — чтобы не светить его в публичном коде.
 

@@ -1,8 +1,13 @@
 import os
 import psycopg2
 
-FREE_LIMIT_DEFAULT = 3
-FREE_LIMIT_PROMO = 10
+# Модель бесплатных сканов: сначала щедрый lifetime-пул (не сбрасывается по дням),
+# после его исчерпания — постоянный дневной лимит. Промокод повышает именно
+# lifetime-пул (более щедрое знакомство с продуктом для пришедших по каналу),
+# а не дневной хвост. Все три значения настраиваются через .env.
+FREE_LIFETIME_LIMIT       = int(os.environ.get('FREE_LIFETIME_LIMIT', 20))
+FREE_LIFETIME_LIMIT_PROMO = int(os.environ.get('FREE_LIFETIME_LIMIT_PROMO', 40))
+FREE_DAILY_LIMIT_AFTER    = int(os.environ.get('FREE_DAILY_LIMIT_AFTER', 3))
 
 # Первые платежи принимаются напрямую по СБП (личный перевод, без самозанятости).
 # После этого числа приём приостанавливается до регистрации самозанятости —
@@ -115,11 +120,19 @@ def set_promo_code(device_id, code):
 def check_and_increment_usage(device_id):
     """
     Returns (allowed: bool, used: int, limit: int).
-    Atomically increments today's count and checks it against the limit —
-    a separate SELECT-then-UPDATE would race under concurrent requests
-    (e.g. a double-tap or two open tabs) and let more than `limit` through.
-    Runs on a single connection (this is called on every scan — /analyze and
-    /lookup — so connection overhead here matters more than anywhere else).
+
+    Two phases:
+      1. Lifetime pool (FREE_LIFETIME_LIMIT, or _PROMO with a valid promo code)
+         — not reset daily. While the running lifetime total is under this
+         cap, every scan is allowed regardless of which day it falls on.
+      2. Once the lifetime pool is exhausted, falls back to a plain daily cap
+         (FREE_DAILY_LIMIT_AFTER) that resets every day, forever.
+
+    Everything happens on one connection with the row locked via the
+    INSERT ... ON CONFLICT DO UPDATE — a separate SELECT-then-UPDATE would
+    race under concurrent requests (e.g. a double-tap or two open tabs) and
+    let more than the limit through. Single connection matters here more
+    than anywhere else since this runs on every scan (/analyze, /lookup).
     """
     conn = get_conn()
     try:
@@ -133,7 +146,13 @@ def check_and_increment_usage(device_id):
                 return True, 0, None
 
             promo_code = _touch_device(cur, device_id)
-            limit = FREE_LIMIT_PROMO if promo_code else FREE_LIMIT_DEFAULT
+            lifetime_limit = FREE_LIFETIME_LIMIT_PROMO if promo_code else FREE_LIFETIME_LIMIT
+
+            cur.execute(
+                "SELECT COALESCE(SUM(scans_count), 0) FROM usage_log WHERE device_id = %s",
+                (device_id,)
+            )
+            lifetime_used_before = cur.fetchone()[0]
 
             cur.execute(
                 "INSERT INTO usage_log (device_id, day, scans_count) VALUES (%s, CURRENT_DATE, 1) "
@@ -141,19 +160,25 @@ def check_and_increment_usage(device_id):
                 "RETURNING scans_count",
                 (device_id,)
             )
-            used = cur.fetchone()[0]
+            today_used = cur.fetchone()[0]
 
-            if used > limit:
+            if lifetime_used_before < lifetime_limit:
+                # Still inside the lifetime pool — allowed regardless of today's count.
+                conn.commit()
+                return True, lifetime_used_before + 1, lifetime_limit
+
+            # Lifetime pool exhausted — plain daily cap from here on.
+            if today_used > FREE_DAILY_LIMIT_AFTER:
                 cur.execute(
                     "UPDATE usage_log SET scans_count = scans_count - 1 "
                     "WHERE device_id = %s AND day = CURRENT_DATE",
                     (device_id,)
                 )
                 conn.commit()
-                return False, limit, limit
+                return False, FREE_DAILY_LIMIT_AFTER, FREE_DAILY_LIMIT_AFTER
 
         conn.commit()
-        return True, used, limit
+        return True, today_used, FREE_DAILY_LIMIT_AFTER
     finally:
         conn.close()
 
@@ -164,6 +189,26 @@ def count_payments_granted():
         with conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) FROM events WHERE type = 'payment_granted'")
             return cur.fetchone()[0]
+    finally:
+        conn.close()
+
+
+def funnel_counts():
+    """Counts for the demand-test funnel: paywall shown -> buy click -> payment granted."""
+    conn = get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT type, COUNT(*) FROM events "
+                "WHERE type IN ('paywall_shown', 'buy_click', 'payment_granted') "
+                "GROUP BY type"
+            )
+            counts = dict(cur.fetchall())
+        return {
+            'paywall_shown': counts.get('paywall_shown', 0),
+            'buy_click': counts.get('buy_click', 0),
+            'payment_granted': counts.get('payment_granted', 0),
+        }
     finally:
         conn.close()
 
