@@ -681,6 +681,9 @@ async function showPaywall(used, limit) {
     const status = await res.json();
     openBlock.classList.toggle('hidden', !status.accepting);
     closedMessage.classList.toggle('hidden', status.accepting);
+    if (status.telegram_username) {
+      document.getElementById('paywall-telegram-link').href = `https://t.me/${status.telegram_username}`;
+    }
   } catch (err) {
     // если статус недоступен — по умолчанию считаем приём открытым
     openBlock.classList.remove('hidden');

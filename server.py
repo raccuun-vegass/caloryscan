@@ -18,6 +18,7 @@ client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
 
 ADMIN_SECRET = os.environ.get('ADMIN_SECRET')
 PAYMENT_CARD_NUMBER = os.environ.get('PAYMENT_CARD_NUMBER', '')
+SUPPORT_TELEGRAM_USERNAME = os.environ.get('SUPPORT_TELEGRAM_USERNAME', '')
 
 DEVICE_ID_RE = re.compile(r'^[A-Za-z0-9_-]{8,128}$')
 EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
@@ -279,6 +280,7 @@ def payment_status():
         'granted': granted,
         'limit': db.MAX_PAYMENTS_BEFORE_REGISTRATION,
         'funnel': db.funnel_counts(),
+        'telegram_username': SUPPORT_TELEGRAM_USERNAME,
     })
 
 
