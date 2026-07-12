@@ -17,6 +17,9 @@
   #status.err { background: #fff0f0; color: #dc2626; }
   #payment-status { font-size: 14px; color: #666; margin-top: 12px; padding: 10px; background: #f2f2f7; border-radius: 8px; }
   hr { margin: 28px 0; border: none; border-top: 1px solid #e5e5ea; }
+  #channel-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+  #channel-table th, #channel-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e5e5ea; }
+  #channel-table th { color: #666; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -26,6 +29,8 @@
   <input type="password" id="secret" placeholder="X-Admin-Secret" />
 
   <div id="payment-status">Загрузка статуса приёма платежей…</div>
+
+  <table id="channel-table"></table>
 
   <hr />
 
@@ -70,7 +75,21 @@
       el.innerHTML =
         `Платежей выдано: ${data.granted} / ${data.limit} — приём ${data.accepting ? 'ОТКРЫТ' : 'ЗАКРЫТ'}<br>` +
         `Воронка: показан пейволл ${f.paywall_shown ?? 0} → нажали «показать номер карты» ${f.buy_click ?? 0} → оплатили ${f.payment_granted ?? 0}` +
-        (f.buy_click ? ` (конверсия из клика в оплату: ${conv}%)` : '');
+        (f.buy_click ? ` (конверсия из клика в оплату: ${conv}%)` : '') +
+        `<br>Установок PWA: ${f.pwa_installed ?? 0}`;
+
+      const byChannel = data.funnel_by_channel || {};
+      const rows = Object.entries(byChannel).sort((a, b) => b[1].paywall_shown - a[1].paywall_shown);
+      const table = document.getElementById('channel-table');
+      if (rows.length === 0) {
+        table.innerHTML = '';
+      } else {
+        table.innerHTML =
+          '<tr><th>Канал</th><th>Пейволл</th><th>Клик карты</th><th>Оплата</th><th>Установки</th></tr>' +
+          rows.map(([channel, c]) =>
+            `<tr><td>${channel}</td><td>${c.paywall_shown}</td><td>${c.buy_click}</td><td>${c.payment_granted}</td><td>${c.pwa_installed}</td></tr>`
+          ).join('');
+      }
     } catch (e) {
       el.textContent = 'Не удалось загрузить статус приёма платежей';
     }

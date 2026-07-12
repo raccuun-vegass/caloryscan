@@ -802,6 +802,14 @@ document.getElementById('install-banner-btn').addEventListener('click', async ()
   document.getElementById('install-banner').classList.add('hidden');
 });
 
+window.addEventListener('appinstalled', () => {
+  fetch('/event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device_id: getDeviceId(), type: 'pwa_installed' })
+  }).catch(() => {});
+});
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 renderDiary();
 renderGoalsForm();

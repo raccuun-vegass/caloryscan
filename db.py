@@ -193,22 +193,44 @@ def count_payments_granted():
         conn.close()
 
 
+FUNNEL_EVENT_TYPES = ('paywall_shown', 'buy_click', 'payment_granted', 'pwa_installed')
+
+
 def funnel_counts():
     """Counts for the demand-test funnel: paywall shown -> buy click -> payment granted."""
     conn = get_conn()
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT type, COUNT(*) FROM events "
-                "WHERE type IN ('paywall_shown', 'buy_click', 'payment_granted') "
-                "GROUP BY type"
+                "SELECT type, COUNT(*) FROM events WHERE type IN %s GROUP BY type",
+                (FUNNEL_EVENT_TYPES,)
             )
             counts = dict(cur.fetchall())
-        return {
-            'paywall_shown': counts.get('paywall_shown', 0),
-            'buy_click': counts.get('buy_click', 0),
-            'payment_granted': counts.get('payment_granted', 0),
-        }
+        return {t: counts.get(t, 0) for t in FUNNEL_EVENT_TYPES}
+    finally:
+        conn.close()
+
+
+def funnel_counts_by_channel():
+    """Same funnel, broken down by promo_code (channel attribution) so we can compare
+    traffic sources against each other — device_id links events to the promo_code
+    it was tagged with on the paywall. Devices without a code are grouped together."""
+    conn = get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT COALESCE(d.promo_code, 'без промокода') AS channel, e.type, COUNT(*) "
+                "FROM events e LEFT JOIN devices d ON d.device_id = e.device_id "
+                "WHERE e.type IN %s "
+                "GROUP BY channel, e.type",
+                (FUNNEL_EVENT_TYPES,)
+            )
+            rows = cur.fetchall()
+        result = {}
+        for channel, event_type, count in rows:
+            result.setdefault(channel, {t: 0 for t in FUNNEL_EVENT_TYPES})
+            result[channel][event_type] = count
+        return result
     finally:
         conn.close()
 

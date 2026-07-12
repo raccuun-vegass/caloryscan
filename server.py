@@ -245,7 +245,7 @@ def track_event():
     data = request.get_json() or {}
     device_id = get_device_id(data)
     event_type = (data.get('type') or '').strip()
-    if not device_id or event_type not in {'buy_click'}:
+    if not device_id or event_type not in {'buy_click', 'pwa_installed'}:
         return jsonify({'error': 'Некорректный запрос'}), 400
     db.log_event(event_type, device_id)
     return jsonify({'ok': True})
@@ -280,6 +280,7 @@ def payment_status():
         'granted': granted,
         'limit': db.MAX_PAYMENTS_BEFORE_REGISTRATION,
         'funnel': db.funnel_counts(),
+        'funnel_by_channel': db.funnel_counts_by_channel(),
         'telegram_username': SUPPORT_TELEGRAM_USERNAME,
     })
 
