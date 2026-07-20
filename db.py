@@ -1,4 +1,5 @@
 import os
+import json
 import psycopg2
 
 # Модель бесплатных сканов: сначала щедрый lifetime-пул (не сбрасывается по дням),
@@ -65,6 +66,22 @@ def init_db():
                     ts TIMESTAMPTZ NOT NULL DEFAULT now()
                 )
             """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS analytics_events (
+                    id SERIAL PRIMARY KEY,
+                    session_id TEXT NOT NULL,
+                    device_id TEXT,
+                    source TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    target TEXT,
+                    duration_ms INTEGER,
+                    meta JSONB,
+                    url TEXT,
+                    ts TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_analytics_source_name_target ON analytics_events(source, name, target)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_analytics_session ON analytics_events(session_id)")
         conn.commit()
     finally:
         conn.close()
@@ -292,5 +309,73 @@ def log_event(event_type, device_id):
                 (event_type, device_id)
             )
         conn.commit()
+    finally:
+        conn.close()
+
+
+def log_analytics_events(session_id, device_id, source, events):
+    """Bulk-insert a batch of client-side analytics events (clicks, scroll
+    depth, time spent per landing section / app tab). Each event is a dict
+    with name, target, duration_ms, meta, url — already validated/sanitized
+    by the caller."""
+    conn = get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.executemany(
+                "INSERT INTO analytics_events "
+                "(session_id, device_id, source, name, target, duration_ms, meta, url) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                [
+                    (
+                        session_id, device_id, source,
+                        e['name'], e.get('target'), e.get('duration_ms'),
+                        json.dumps(e['meta']) if e.get('meta') is not None else None,
+                        e.get('url'),
+                    )
+                    for e in events
+                ]
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+ANALYTICS_MAX_TARGETS_PER_GROUP = 15
+
+
+def analytics_summary():
+    """Aggregated view for the admin panel: event counts and average duration
+    (for time-based events like section_time/tab_time), grouped by source,
+    event name and target, over the last 30 days."""
+    conn = get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT source, name, target, COUNT(*), AVG(duration_ms)
+                FROM analytics_events
+                WHERE ts > now() - interval '30 days'
+                GROUP BY source, name, target
+                ORDER BY source, name, COUNT(*) DESC
+            """)
+            rows = cur.fetchall()
+
+            cur.execute("""
+                SELECT source, COUNT(DISTINCT session_id), COUNT(*)
+                FROM analytics_events
+                WHERE ts > now() - interval '30 days'
+                GROUP BY source
+            """)
+            overview_rows = cur.fetchall()
+        result = {}
+        for source, name, target, count, avg_duration in rows:
+            groups = result.setdefault(source, {}).setdefault(name, [])
+            if len(groups) < ANALYTICS_MAX_TARGETS_PER_GROUP:
+                groups.append({
+                    'target': target,
+                    'count': count,
+                    'avg_duration_ms': round(avg_duration) if avg_duration is not None else None,
+                })
+        overview = {source: {'sessions': sessions, 'events': events} for source, sessions, events in overview_rows}
+        return {'overview': overview, 'groups': result}
     finally:
         conn.close()

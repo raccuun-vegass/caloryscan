@@ -1,5 +1,5 @@
-const CACHE = 'caloryscan-v13';
-const ASSETS = ['/', '/app.js', '/style.css', '/icon-192.png', '/icon-512.png'];
+const CACHE = 'caloryscan-v14';
+const ASSETS = ['/', '/app.js', '/analytics.js', '/style.css', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));

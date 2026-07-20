@@ -20,6 +20,10 @@
   #channel-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
   #channel-table th, #channel-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e5e5ea; }
   #channel-table th { color: #666; font-weight: 600; }
+  .analytics-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 13px; }
+  .analytics-table th, .analytics-table td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #e5e5ea; }
+  .analytics-table th { color: #666; font-weight: 600; }
+  .analytics-group-title { font-size: 13px; font-weight: 600; margin-top: 16px; color: #333; }
 </style>
 </head>
 <body>
@@ -31,6 +35,12 @@
   <div id="payment-status">Загрузка статуса приёма платежей…</div>
 
   <table id="channel-table"></table>
+
+  <hr />
+
+  <h2>Поведение пользователей (30 дней)</h2>
+  <div id="analytics-overview" style="font-size:13px; color:#666;">Загрузка…</div>
+  <div id="analytics-groups"></div>
 
   <hr />
 
@@ -57,7 +67,10 @@
 <script>
   const secretInput = document.getElementById('secret');
   secretInput.value = localStorage.getItem('kaloriskan_admin_secret') || '';
-  secretInput.addEventListener('change', () => localStorage.setItem('kaloriskan_admin_secret', secretInput.value));
+  secretInput.addEventListener('change', () => {
+    localStorage.setItem('kaloriskan_admin_secret', secretInput.value);
+    loadAnalytics();
+  });
 
   function log(msg, ok) {
     const el = document.getElementById('status');
@@ -95,6 +108,54 @@
     }
   }
   loadPaymentStatus();
+
+  const EVENT_LABELS = {
+    click: 'Клики',
+    scroll_depth: 'Глубина прокрутки',
+    section_time: 'Время на разделах / вкладках',
+    page_view: 'Просмотры страницы',
+  };
+  const SOURCE_LABELS = { app: 'Приложение', landing: 'Лендинг' };
+
+  function formatDuration(ms) {
+    if (ms === null || ms === undefined) return '—';
+    return ms >= 1000 ? `${(ms / 1000).toFixed(1)} сек` : `${Math.round(ms)} мс`;
+  }
+
+  async function loadAnalytics() {
+    const overviewEl = document.getElementById('analytics-overview');
+    const groupsEl = document.getElementById('analytics-groups');
+    overviewEl.textContent = 'Загрузка…';
+    groupsEl.innerHTML = '';
+    try {
+      const res = await fetch('/admin/analytics', { headers: { 'X-Admin-Secret': secretInput.value } });
+      if (!res.ok) {
+        overviewEl.textContent = res.status === 403 ? 'Укажите admin secret, чтобы увидеть аналитику' : 'Не удалось загрузить аналитику';
+        return;
+      }
+      const data = await res.json();
+      const overview = data.overview || {};
+      overviewEl.innerHTML = Object.keys(overview).length
+        ? Object.entries(overview).map(([source, o]) =>
+            `${SOURCE_LABELS[source] || source}: ${o.sessions} сессий, ${o.events} событий`
+          ).join(' · ')
+        : 'Данных пока нет';
+
+      const groups = data.groups || {};
+      groupsEl.innerHTML = Object.entries(groups).map(([source, names]) =>
+        Object.entries(names).map(([name, rows]) => `
+          <div class="analytics-group-title">${SOURCE_LABELS[source] || source} — ${EVENT_LABELS[name] || name}</div>
+          <table class="analytics-table">
+            <tr><th>Куда / что</th><th>Кол-во</th><th>Ср. время</th></tr>
+            ${rows.map(r => `<tr><td>${r.target ?? '—'}</td><td>${r.count}</td><td>${formatDuration(r.avg_duration_ms)}</td></tr>`).join('')}
+          </table>
+        `).join('')
+      ).join('');
+    } catch (e) {
+      overviewEl.textContent = 'Ошибка сети при загрузке аналитики';
+    }
+  }
+  loadAnalytics();
 
   document.getElementById('btn-grant').addEventListener('click', async () => {
     const device_id = document.getElementById('grant-device-id').value.trim();

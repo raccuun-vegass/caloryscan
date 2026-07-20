@@ -22,6 +22,19 @@ SUPPORT_TELEGRAM_USERNAME = os.environ.get('SUPPORT_TELEGRAM_USERNAME', '')
 
 DEVICE_ID_RE = re.compile(r'^[A-Za-z0-9_-]{8,128}$')
 EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+SESSION_ID_RE = re.compile(r'^[A-Za-z0-9_-]{8,128}$')
+EVENT_NAME_RE = re.compile(r'^[A-Za-z0-9_]{1,64}$')
+
+ANALYTICS_SOURCES = {'app', 'landing'}
+ANALYTICS_MAX_EVENTS_PER_BATCH = 100
+ANALYTICS_MAX_DURATION_MS = 6 * 60 * 60 * 1000  # 6 hours — generous upper bound, discards garbage
+ANALYTICS_MAX_TARGET_LEN = 200
+ANALYTICS_MAX_URL_LEN = 300
+ANALYTICS_MAX_META_JSON_LEN = 2000
+
+# 20 MB covers the largest legitimate payload (a base64-encoded /analyze image, capped
+# at MAX_IMAGE_B64_LEN below); analytics batches are capped separately by field/event limits.
+app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024
 
 db.init_db()
 
@@ -249,6 +262,80 @@ def track_event():
         return jsonify({'error': 'Некорректный запрос'}), 400
     db.log_event(event_type, device_id)
     return jsonify({'ok': True})
+
+
+def _validate_analytics_event(raw):
+    if not isinstance(raw, dict):
+        return None
+    name = (raw.get('name') or '').strip()
+    if not EVENT_NAME_RE.match(name):
+        return None
+
+    target = raw.get('target')
+    if target is not None:
+        target = str(target).strip()[:ANALYTICS_MAX_TARGET_LEN] or None
+
+    duration_ms = raw.get('duration_ms')
+    if duration_ms is not None:
+        try:
+            duration_ms = int(duration_ms)
+        except (ValueError, TypeError):
+            duration_ms = None
+        else:
+            if duration_ms < 0 or duration_ms > ANALYTICS_MAX_DURATION_MS:
+                duration_ms = None
+
+    url = raw.get('url')
+    if url is not None:
+        url = str(url).strip()[:ANALYTICS_MAX_URL_LEN] or None
+
+    meta = raw.get('meta')
+    if meta is not None:
+        if not isinstance(meta, (dict, list, str, int, float, bool)):
+            meta = None
+        elif len(json.dumps(meta)) > ANALYTICS_MAX_META_JSON_LEN:
+            meta = None
+
+    return {'name': name, 'target': target, 'duration_ms': duration_ms, 'meta': meta, 'url': url}
+
+
+@app.route('/track', methods=['POST'])
+def track_analytics():
+    # force=True: sendBeacon (used on page-unload flushes) sends the JSON payload as a
+    # text/plain Blob to dodge CORS preflight from the landing's separate origin, so the
+    # Content-Type header can't be trusted here.
+    data = request.get_json(silent=True, force=True) or {}
+
+    session_id = (data.get('session_id') or '').strip()
+    if not SESSION_ID_RE.match(session_id):
+        return jsonify({'error': 'Некорректный session_id'}), 400
+
+    source = (data.get('source') or '').strip()
+    if source not in ANALYTICS_SOURCES:
+        return jsonify({'error': 'Некорректный source'}), 400
+
+    device_id = (data.get('device_id') or '').strip() or None
+    if device_id and not DEVICE_ID_RE.match(device_id):
+        device_id = None
+
+    raw_events = data.get('events')
+    if not isinstance(raw_events, list) or not raw_events:
+        return jsonify({'error': 'events обязателен'}), 400
+    raw_events = raw_events[:ANALYTICS_MAX_EVENTS_PER_BATCH]
+
+    events = [e for e in (_validate_analytics_event(r) for r in raw_events) if e]
+    if not events:
+        return jsonify({'error': 'Нет валидных событий'}), 400
+
+    db.log_analytics_events(session_id, device_id, source, events)
+    return jsonify({'ok': True, 'accepted': len(events)})
+
+
+@app.route('/admin/analytics', methods=['GET'])
+def admin_analytics():
+    if not require_admin():
+        return jsonify({'error': 'forbidden'}), 403
+    return jsonify(db.analytics_summary())
 
 
 @app.route('/admin/grant', methods=['POST'])
